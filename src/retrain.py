@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import tensorflow as tf
@@ -101,6 +102,17 @@ def retrain_model():
 
     val_loss, val_accuracy = model.evaluate(val_data, verbose=0)
     model.save(MODEL_PATH)
+
+    metrics_path = os.path.join("models", "training_metrics.json")
+    os.makedirs(os.path.dirname(metrics_path), exist_ok=True)
+    with open(metrics_path, "w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "validation_accuracy": float(val_accuracy),
+                "validation_loss": float(val_loss),
+            },
+            f,
+        )
 
     return {
         "message": "Model retrained successfully",

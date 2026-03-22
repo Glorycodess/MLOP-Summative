@@ -5,6 +5,7 @@ from typing import List
 
 from src.prediction import predict_image
 from src.retrain import retrain_model
+from src import insights as insights_module
 
 app = FastAPI(title="Cassava Leaf Disease API")
 
@@ -26,6 +27,42 @@ def health():
         "status": "ok",
         "model": "cassava_model.keras",
         "message": "API is healthy"
+    }
+
+
+@app.get("/metrics")
+def metrics():
+    """
+    Real model insight data for the Flutter Predict screen.
+
+    * class_distribution: image counts per class from the original cassava dataset
+      folder (Notebook/cassava_small). All five model classes are listed; counts
+      are 0 if that folder is absent or empty.
+    * validation_accuracy: from models/training_metrics.json after retrain, else a
+      default placeholder until the first retrain run.
+    """
+    class_distribution = insights_module.get_class_distribution_for_metrics()
+    validation_accuracy = insights_module.get_validation_accuracy_for_metrics()
+    return {
+        "class_distribution": class_distribution,
+        "validation_accuracy": validation_accuracy,
+    }
+
+
+@app.get("/model-insights")
+def model_insights():
+    """
+    Same data as /metrics but with human-readable class labels in class_distribution.
+    Kept for backward compatibility.
+    """
+    raw = insights_module.get_class_distribution_counts()
+    distribution = {
+        insights_module.humanize_class_name(k): int(v) for k, v in raw.items()
+    }
+    acc = insights_module.get_persisted_validation_accuracy()
+    return {
+        "class_distribution": distribution,
+        "validation_accuracy": acc,
     }
 
 

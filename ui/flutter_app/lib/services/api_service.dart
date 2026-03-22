@@ -25,6 +25,45 @@ class HealthResponse {
   }
 }
 
+/// `GET /metrics` — class counts on disk + last retrain validation accuracy.
+class ModelInsightsResponse {
+  const ModelInsightsResponse({
+    required this.classDistribution,
+    this.validationAccuracy,
+  });
+
+  /// Display label -> image count (merged training folders).
+  final Map<String, int> classDistribution;
+
+  /// 0.0–1.0 from last retrain, or null if never persisted.
+  final double? validationAccuracy;
+
+  factory ModelInsightsResponse.fromJson(Map<String, dynamic> json) {
+    final map = <String, int>{};
+    final raw = json['class_distribution'];
+    if (raw is Map) {
+      for (final e in raw.entries) {
+        final k = e.key;
+        final v = e.value;
+        if (k is String && v is num) {
+          map[k] = v.round();
+        }
+      }
+    }
+
+    double? acc;
+    final a = json['validation_accuracy'];
+    if (a is num) {
+      acc = a.toDouble();
+    }
+
+    return ModelInsightsResponse(
+      classDistribution: map,
+      validationAccuracy: acc,
+    );
+  }
+}
+
 /// Response body from `POST /predict` (matches FastAPI `predict` route).
 class PredictResponse {
   const PredictResponse({
@@ -84,6 +123,27 @@ class ApiService {
     }
 
     return HealthResponse.fromJson(decoded);
+  }
+
+  /// `GET {baseUrl}/metrics` — dataset class counts and persisted val accuracy.
+  Future<ModelInsightsResponse> fetchModelInsights() async {
+    final uri = Uri.parse('${AppConstants.baseUrl}/metrics');
+    final response = await _client
+        .get(uri)
+        .timeout(const Duration(seconds: 20));
+
+    if (response.statusCode != 200) {
+      throw ApiException(
+        'Insights request failed (${response.statusCode})',
+      );
+    }
+
+    final dynamic decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw ApiException('Invalid insights response');
+    }
+
+    return ModelInsightsResponse.fromJson(decoded);
   }
 
   /// Multipart `POST {baseUrl}/predict` with form field `file` (FastAPI `UploadFile`).
