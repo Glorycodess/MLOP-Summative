@@ -9,17 +9,12 @@ METRICS_JSON = os.path.join("models", "training_metrics.json")
 ORIGINAL_DATA_DIR = "Notebook/cassava_small"
 NEW_DATA_DIR = "data/new_data"
 
-# Same class order / names as src.prediction.CLASS_NAMES (avoid importing prediction → TF load).
 EXPECTED_CLASSES = (
     "bacterial_blight",
-    "brown_streak",
-    "green_mottle",
     "healthy",
-    "mosaic",
 )
 
-# Used only when models/training_metrics.json is missing (no retrain yet).
-DEFAULT_VALIDATION_ACCURACY = 0.46
+DEFAULT_VALIDATION_ACCURACY = 0.67 #initial binary model accuracy
 
 _IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif"}
 

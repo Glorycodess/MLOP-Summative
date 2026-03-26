@@ -7,7 +7,7 @@ from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.layers import GlobalAveragePooling2D, Dense, Dropout
 from tensorflow.keras.models import Model
 
-MODEL_PATH = "models/cassava_model.keras"
+MODEL_PATH = "models/best_cassava_binary_finals.keras"
 ORIGINAL_DATA_DIR = "Notebook/cassava_small"
 NEW_DATA_DIR = "data/new_data"
 COMBINED_DATA_DIR = "data/combined_data"
