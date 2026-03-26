@@ -17,5 +17,15 @@ uploads/
 data/combined_data/
 data/new_data/
 
-# Model (optional if large)
+# Models and large files
 models/*.keras
+models/*.h5
+*.keras
+*.h5
+
+# Notebook data and models
+notebook/cassava_binary/
+notebook/cassava_small/
+notebook/best_cassava_binary_model.keras
+notebook/cassava_model.keras
+notebook/best_cassava.final.keras
