@@ -8,7 +8,7 @@ from tensorflow.keras.layers import GlobalAveragePooling2D, Dense, Dropout
 from tensorflow.keras.models import Model
 
 MODEL_PATH = "models/best_cassava_binary_finals.keras"
-ORIGINAL_DATA_DIR = "Notebook/cassava_small"
+ORIGINAL_DATA_DIR = "data/train"
 NEW_DATA_DIR = "data/new_data"
 COMBINED_DATA_DIR = "data/combined_data"
 
@@ -35,14 +35,14 @@ def copy_folder_contents(src_folder: str, dst_folder: str):
                     shutil.copy2(src_file, dst_file)
 
 
-def retrain_model():
+def retrain_model(new_data_dir: str = NEW_DATA_DIR, train_dir: str = ORIGINAL_DATA_DIR):
     if os.path.exists(COMBINED_DATA_DIR):
         shutil.rmtree(COMBINED_DATA_DIR)
 
     os.makedirs(COMBINED_DATA_DIR, exist_ok=True)
 
-    copy_folder_contents(ORIGINAL_DATA_DIR, COMBINED_DATA_DIR)
-    copy_folder_contents(NEW_DATA_DIR, COMBINED_DATA_DIR)
+    copy_folder_contents(train_dir, COMBINED_DATA_DIR)
+    copy_folder_contents(new_data_dir, COMBINED_DATA_DIR)
 
     datagen = ImageDataGenerator(
         rescale=1./255,
@@ -102,6 +102,10 @@ def retrain_model():
 
     val_loss, val_accuracy = model.evaluate(val_data, verbose=0)
     model.save(MODEL_PATH)
+
+    if os.path.exists(new_data_dir):
+        shutil.rmtree(new_data_dir)
+        os.makedirs(new_data_dir, exist_ok=True)
 
     metrics_path = os.path.join("models", "training_metrics.json")
     os.makedirs(os.path.dirname(metrics_path), exist_ok=True)
