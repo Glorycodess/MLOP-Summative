@@ -1,28 +1,17 @@
 # Python
 __pycache__/
 *.pyc
-
 # Virtual env
 venv/
 .env
-
 # Mac
 .DS_Store
-
 # Jupyter
 .ipynb_checkpoints/
-
 # Uploads & temp data
 uploads/
 data/combined_data/
 data/new_data/
-
-# Models and large files
-models/*.keras
-models/*.h5
-*.keras
-*.h5
-
 # Notebook data and models
 notebook/cassava_binary/
 notebook/cassava_small/
