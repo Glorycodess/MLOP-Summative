@@ -1,24 +1,17 @@
 import json
-import os
 import shutil
 from pathlib import Path
-import tensorflow as tf
+
 import numpy as np
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.applications import MobileNetV2
-from tensorflow.keras.layers import GlobalAveragePooling2D, Dense, Dropout
-from tensorflow.keras.models import Model
+
+from src.model import MODEL_PATH, EXPECTED_CLASS_ORDER, build_binary_model
+from src.preprocessing import IMG_SIZE, BATCH_SIZE, create_training_datagen, create_validation_datagen
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-MODEL_PATH = BASE_DIR / "models" / "cassava_binary_final.keras"
 ORIGINAL_DATA_DIR = BASE_DIR / "data" / "train"
 NEW_DATA_DIR = BASE_DIR / "data" / "new_data"
 COMBINED_DATA_DIR = BASE_DIR / "data" / "combined_data"
-
-IMG_SIZE = (224, 224)
-BATCH_SIZE = 32
-EXPECTED_CLASS_ORDER = ["bacterial_blight", "healthy"]
 
 
 def copy_folder_contents(src_folder, dst_folder):
@@ -49,60 +42,35 @@ def retrain_model(new_data_dir=NEW_DATA_DIR, train_dir=ORIGINAL_DATA_DIR):
     copy_folder_contents(train_dir, COMBINED_DATA_DIR)
     copy_folder_contents(new_data_dir, COMBINED_DATA_DIR)
 
-    datagen = ImageDataGenerator(
-        rescale=1./255,
-        validation_split=0.2,
-        rotation_range=20,
-        zoom_range=0.2,
-        horizontal_flip=True
-    )
+    train_datagen = create_training_datagen()
+    val_datagen = create_validation_datagen()
 
-    train_data = datagen.flow_from_directory(
+    train_data = train_datagen.flow_from_directory(
         str(COMBINED_DATA_DIR),
         target_size=IMG_SIZE,
         batch_size=BATCH_SIZE,
         class_mode="categorical",
         subset="training",
-        shuffle=True
+        shuffle=True,
     )
 
-    val_data = datagen.flow_from_directory(
+    val_data = val_datagen.flow_from_directory(
         str(COMBINED_DATA_DIR),
         target_size=IMG_SIZE,
         batch_size=BATCH_SIZE,
         class_mode="categorical",
         subset="validation",
-        shuffle=False
+        shuffle=False,
     )
 
     num_classes = train_data.num_classes
-
-    base_model = MobileNetV2(
-        weights="imagenet",
-        include_top=False,
-        input_shape=(224, 224, 3)
-    )
-    base_model.trainable = False
-
-    x = base_model.output
-    x = GlobalAveragePooling2D()(x)
-    x = Dense(128, activation="relu")(x)
-    x = Dropout(0.5)(x)
-    outputs = Dense(num_classes, activation="softmax")(x)
-
-    model = Model(inputs=base_model.input, outputs=outputs)
-
-    model.compile(
-        optimizer="adam",
-        loss="categorical_crossentropy",
-        metrics=["accuracy"]
-    )
+    model = build_binary_model(num_classes)
 
     model.fit(
         train_data,
         validation_data=val_data,
         epochs=3,
-        verbose=1
+        verbose=1,
     )
 
     val_loss, val_accuracy = model.evaluate(val_data, verbose=0)
@@ -110,11 +78,11 @@ def retrain_model(new_data_dir=NEW_DATA_DIR, train_dir=ORIGINAL_DATA_DIR):
     y_true = val_data.classes.astype(int)
     y_probs = model.predict(val_data, verbose=0)
     y_pred = np.argmax(y_probs, axis=1).astype(int)
-    class_by_index = {
-        idx: name for name, idx in val_data.class_indices.items()
-    }
+
+    class_by_index = {idx: name for name, idx in val_data.class_indices.items()}
     binary_index = {name: i for i, name in enumerate(EXPECTED_CLASS_ORDER)}
     confusion = [[0, 0], [0, 0]]
+
     for true_idx, pred_idx in zip(y_true, y_pred):
         true_name = class_by_index.get(int(true_idx))
         pred_name = class_by_index.get(int(pred_idx))
@@ -124,10 +92,6 @@ def retrain_model(new_data_dir=NEW_DATA_DIR, train_dir=ORIGINAL_DATA_DIR):
             confusion[ti][pi] += 1
 
     model.save(str(MODEL_PATH))
-
-    # Do NOT delete uploaded images after training.
-    # Product flow expects the server to retain uploaded data so users can retrain later
-    # without re-uploading.
 
     metrics_path = BASE_DIR / "models" / "training_metrics.json"
     metrics_path.parent.mkdir(parents=True, exist_ok=True)
