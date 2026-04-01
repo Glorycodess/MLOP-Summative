@@ -12,9 +12,9 @@ YouTube: `[Add your YouTube link here]`
 
 ## Live URL
 
-API: `[Add your Railway URL here]`
+API: `https://mlop-summative-production.up.railway.app`
 
-API Docs: `[Add your Railway URL here]/docs`
+API Docs: `https://mlop-summative-production.up.railway.app/docs`
 
 ---
 
@@ -56,9 +56,9 @@ MLOP-Summative/
 │   │   └── bacterial_blight/
 │   └── new_data/
 ├── models/
-│   └── best_cassava_binary_finals.keras
+│   └── cassava_binary_final.keras
 └── ui/
-    └── (Flutter app)
+    └── flutter_app/
 ```
 
 ---
@@ -68,7 +68,7 @@ MLOP-Summative/
 ### 1. Clone the repository
 
 ```bash
-git clone [your github repo URL here]
+git clone https://github.com/Glorycodess/MLOP-Summative.git
 cd MLOP-Summative
 ```
 
@@ -101,8 +101,8 @@ Then open `http://localhost:7860/docs`
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/` | Health check |
-| GET | `/health` | Model status |
+| GET | `/` | Home |
+| GET | `/health` | Model status and uptime |
 | GET | `/metrics` | Accuracy and class distribution |
 | POST | `/predict` | Predict a single leaf image |
 | POST | `/upload-data` | Upload new images for retraining |
@@ -119,9 +119,11 @@ Send a POST request to `/predict` with an image file. The model returns:
 - Class probabilities
 
 ### Retrain the model
-1. Upload new images via `/upload-data` with a label (`healthy` or `bacterial_blight`)
-2. Call `/retrain` to trigger retraining on old + new data combined
-3. The updated model is saved automatically
+1. Open the Flutter app and go to the **Upload/Train** tab
+2. Select multiple images and choose a label (`healthy` or `bacterial_blight`)
+3. Tap **Upload & Train** — images are saved to the server and retraining starts automatically
+4. To retrain again on already saved data, go to the **Retrain** tab and tap **Retrain Model**
+5. Check the **Home** tab to see the updated accuracy after retraining
 
 ---
 
@@ -133,7 +135,7 @@ Locust was used to simulate concurrent users sending requests to the `/predict` 
 
 ```bash
 pip install locust
-locust -f locustfile.py --host=[your Railway URL here]
+locust -f locustfile.py --host=https://mlop-summative-production.up.railway.app
 ```
 
 Then open `http://localhost:8089` and set number of users.
@@ -156,11 +158,11 @@ Then open `http://localhost:8089` and set number of users.
 |--------|-------|
 | Model | MobileNetV2 (Transfer Learning) |
 | Classes | Healthy, Bacterial Blight |
-| Validation Accuracy | `[Add here]` |
-| Validation Loss | `[Add here]` |
+| Validation Accuracy | `[0.67]` |
+| Validation Loss | `[0.52]` |
 
 ---
 
 ## GitHub Repository
 
-`[Add your GitHub repo URL here]`
+`https://github.com/Glorycodess/MLOP-Summative`
