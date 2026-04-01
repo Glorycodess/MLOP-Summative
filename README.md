@@ -151,8 +151,16 @@ Then open `http://localhost:8089` and set number of users.
 | Docker Containers | Requests/sec | Avg Latency | Failures |
 |-------------------|-------------|-------------|----------|
 | 1 |13.4 | 4.75 ms| 0% |
-| 2 | | | |
-| 3 | | | |
+| 2 |N/A |N/A | N/A|
+| 3 | N/A| N/A| N/A|
+
+### Scaling Observation
+
+The system was tested using a single container deployment.
+
+While multiple container scaling (horizontal scaling) was not implemented in this project, the results demonstrate that the system performs efficiently under concurrent load in a single-instance setup.
+
+Future improvements would include deploying multiple containers behind a load balancer to evaluate scalability under higher traffic.
 
 ---
 
