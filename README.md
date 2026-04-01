@@ -151,8 +151,8 @@ Then open `http://localhost:8089` and set number of users.
 | Docker Containers | Requests/sec | Avg Latency | Failures |
 |-------------------|-------------|-------------|----------|
 | 1 |13.4 | 4.75 ms| 0% |
-| 2 | | | |
-| 3 | | | |
+| 2 |N/A |N/A | N/A|
+| 3 | N/A| N/A| N/A|
 
 ---
 
