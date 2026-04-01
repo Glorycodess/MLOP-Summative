@@ -142,7 +142,11 @@ Then open `http://localhost:8089` and set number of users.
 
 ### Results
 
-`[Add your Locust screenshots here]`
+### Run 1
+![Locust Test 1](assets/locust_img_1.png)
+
+### Run 2
+![Locust Test 2](assets/locust_img_2.png)
 
 | Docker Containers | Requests/sec | Avg Latency | Failures |
 |-------------------|-------------|-------------|----------|
