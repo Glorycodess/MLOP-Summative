@@ -1,0 +1,6 @@
+# Railway / Nixpacks: lean install and single worker to limit RAM.
+[phases.install]
+cmds = ['pip install --no-cache-dir -r requirements-prod.txt']
+
+[start]
+cmd = 'uvicorn src.api:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1'

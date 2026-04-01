@@ -1,15 +1,41 @@
+"""Binary cassava disease classifier — single model load per process for FastAPI."""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
 import numpy as np
 from PIL import Image
-from tensorflow.keras.models import load_model
 
-MODEL_PATH = "models/cassava_binary_final.keras"
+# Less TF log noise and slightly leaner runtime on small containers.
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
+os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
+
+from tensorflow.keras.models import load_model  # noqa: E402  (after env)
+
+_BASE = Path(__file__).resolve().parent.parent
+MODEL_PATH = _BASE / "models" / "cassava_binary_final.keras"
 
 CLASS_NAMES = [
     "bacterial_blight",
     "healthy",
 ]
 
-model = load_model(MODEL_PATH)
+_model = None
+
+
+def get_model():
+    """Load Keras model once per worker process (not per request)."""
+    global _model
+    if _model is None:
+        if not MODEL_PATH.is_file():
+            raise FileNotFoundError(
+                f"Model not found at {MODEL_PATH}. Deploy the .keras file with the API.",
+            )
+        # compile=False drops optimizer/training state — lower memory for inference only.
+        _model = load_model(MODEL_PATH, compile=False)
+    return _model
 
 
 def preprocess_image(image_path: str) -> np.ndarray:
@@ -21,6 +47,7 @@ def preprocess_image(image_path: str) -> np.ndarray:
 
 
 def predict_image(image_path: str) -> dict:
+    model = get_model()
     img_array = preprocess_image(image_path)
     prediction = model.predict(img_array, verbose=0)[0]
 
@@ -33,5 +60,5 @@ def predict_image(image_path: str) -> dict:
         "confidence": confidence,
         "probabilities": {
             CLASS_NAMES[i]: float(prediction[i]) for i in range(len(CLASS_NAMES))
-        }
+        },
     }

@@ -1,13 +1,12 @@
 import os
 import shutil
-from fastapi import FastAPI, File, UploadFile, BackgroundTasks
+from contextlib import asynccontextmanager
+
+from fastapi import BackgroundTasks, FastAPI, File, UploadFile
 from typing import List
 
-from src.prediction import predict_image
-from src.retrain import retrain_model
 from src import insights as insights_module
-
-app = FastAPI(title="Cassava Binary Cassava Leaf API")
+from src.prediction import get_model, predict_image
 
 UPLOAD_DIR = "uploads"
 NEW_DATA_DIR = "data/new_data"
@@ -16,6 +15,19 @@ TRAIN_DIR = "data/train"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(NEW_DATA_DIR, exist_ok=True)
 os.makedirs(TRAIN_DIR, exist_ok=True)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Load the Keras model once per worker when the app starts (fail fast if missing)."""
+    get_model()
+    yield
+
+
+app = FastAPI(
+    title="Cassava Binary Cassava Leaf API",
+    lifespan=lifespan,
+)
 
 
 @app.get("/")
@@ -28,7 +40,7 @@ def health():
     return {
         "status": "ok",
         "model": "cassava_binary_final.keras",
-        "message": "API is healthy"
+        "message": "API is healthy",
     }
 
 
@@ -55,14 +67,14 @@ async def predict(file: UploadFile = File(...)):
         "filename": file.filename,
         "prediction": result["predicted_class"],
         "confidence": result["confidence"],
-        "probabilities": result["probabilities"]
+        "probabilities": result["probabilities"],
     }
 
 
 @app.post("/upload-data")
 async def upload_data(
     label: str,
-    files: List[UploadFile] = File(...)
+    files: List[UploadFile] = File(...),
 ):
     label_dir = os.path.join(NEW_DATA_DIR, label)
     os.makedirs(label_dir, exist_ok=True)
@@ -78,11 +90,16 @@ async def upload_data(
     return {
         "message": f"{len(saved_files)} files uploaded successfully",
         "label": label,
-        "files": saved_files
+        "files": saved_files,
     }
 
 
 @app.post("/retrain")
 def retrain(background_tasks: BackgroundTasks):
+    # Import only when retrain is invoked — avoids loading the full training graph at worker startup.
+    from src.retrain import retrain_model
+
     background_tasks.add_task(retrain_model, new_data_dir=NEW_DATA_DIR, train_dir=TRAIN_DIR)
-    return {"message": "Retraining started in background. Check /metrics for updated accuracy when done."}
+    return {
+        "message": "Retraining started in background. Check /metrics for updated accuracy when done.",
+    }

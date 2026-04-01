@@ -1,20 +1,60 @@
-# Python
 __pycache__/
-*.pyc
-# Virtual env
+*.py[cod]
+*$py.class
+*.so
+.Python
 venv/
+.venv/
+env/
 .env
-# Mac
+.env.*
+!.env.example
+
 .DS_Store
-# Jupyter
+.idea/
+.vscode/
+*.swp
+*.swo
+
 .ipynb_checkpoints/
-# Uploads & temp data
-uploads/
-data/combined_data/
-data/new_data/
-# Notebook data and models
+*.ipynb_checkpoints
+profile_default/
+
 notebook/cassava_binary/
 notebook/cassava_small/
-notebook/best_cassava_binary_model.keras
-notebook/cassava_model.keras
-notebook/best_cassava.final.keras
+notebook/*.keras
+notebook/*.h5
+Notebook/
+
+data/train/
+data/val/
+data/test/
+data/raw/
+data/combined_data/
+data/new_data/
+uploads/
+*.zip
+*.tar
+*.tar.gz
+
+models/*.keras
+models/*.h5
+!models/cassava_binary_final.keras
+models/checkpoints/
+models/*.pb
+models/*.onnx
+models/*.tflite
+
+.keras/
+tensorflow_datasets/
+.wandb/
+mlruns/
+lightning_logs/
+logs/
+*.log
+
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
