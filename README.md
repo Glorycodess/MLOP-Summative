@@ -140,13 +140,13 @@ locust -f locustfile.py --host=https://mlop-summative-production.up.railway.app
 
 Then open `http://localhost:8089` and set number of users.
 
-<h3>Load Testing Results</h3>
+<## Load Testing Results
 
-<p><b>Run 1</b></p>
-<img src="assets/locust_img_1.png" width="600"/>
+### Run 1
+![Locust Test 1](assets/locust_img_1.png)
 
-<p><b>Run 2</b></p>
-<img src="assets/locust_img_2.png" width="600"/>
+### Run 2
+![Locust Test 2](assets/locust_img_2.png)
 
 | Docker Containers | Requests/sec | Avg Latency | Failures |
 |-------------------|-------------|-------------|----------|
