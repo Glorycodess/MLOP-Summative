@@ -3,6 +3,7 @@ import os
 import shutil
 from pathlib import Path
 import tensorflow as tf
+import numpy as np
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.layers import GlobalAveragePooling2D, Dense, Dropout
@@ -17,6 +18,7 @@ COMBINED_DATA_DIR = BASE_DIR / "data" / "combined_data"
 
 IMG_SIZE = (224, 224)
 BATCH_SIZE = 32
+EXPECTED_CLASS_ORDER = ["bacterial_blight", "healthy"]
 
 
 def copy_folder_contents(src_folder, dst_folder):
@@ -104,6 +106,23 @@ def retrain_model(new_data_dir=NEW_DATA_DIR, train_dir=ORIGINAL_DATA_DIR):
     )
 
     val_loss, val_accuracy = model.evaluate(val_data, verbose=0)
+    val_data.reset()
+    y_true = val_data.classes.astype(int)
+    y_probs = model.predict(val_data, verbose=0)
+    y_pred = np.argmax(y_probs, axis=1).astype(int)
+    class_by_index = {
+        idx: name for name, idx in val_data.class_indices.items()
+    }
+    binary_index = {name: i for i, name in enumerate(EXPECTED_CLASS_ORDER)}
+    confusion = [[0, 0], [0, 0]]
+    for true_idx, pred_idx in zip(y_true, y_pred):
+        true_name = class_by_index.get(int(true_idx))
+        pred_name = class_by_index.get(int(pred_idx))
+        if true_name in binary_index and pred_name in binary_index:
+            ti = binary_index[true_name]
+            pi = binary_index[pred_name]
+            confusion[ti][pi] += 1
+
     model.save(str(MODEL_PATH))
 
     # Do NOT delete uploaded images after training.
@@ -117,6 +136,8 @@ def retrain_model(new_data_dir=NEW_DATA_DIR, train_dir=ORIGINAL_DATA_DIR):
             {
                 "validation_accuracy": float(val_accuracy),
                 "validation_loss": float(val_loss),
+                "class_order": EXPECTED_CLASS_ORDER,
+                "confusion_matrix": confusion,
             },
             f,
         )
@@ -124,5 +145,7 @@ def retrain_model(new_data_dir=NEW_DATA_DIR, train_dir=ORIGINAL_DATA_DIR):
     return {
         "message": "Model retrained successfully",
         "validation_accuracy": float(val_accuracy),
-        "validation_loss": float(val_loss)
+        "validation_loss": float(val_loss),
+        "confusion_matrix": confusion,
+        "class_order": EXPECTED_CLASS_ORDER,
     }

@@ -52,9 +52,12 @@ def health():
 def metrics():
     class_distribution = insights_module.get_class_distribution_for_metrics()
     validation_accuracy = insights_module.get_validation_accuracy_for_metrics()
+    confusion_matrix = insights_module.get_persisted_confusion_matrix()
     return {
         "class_distribution": class_distribution,
         "validation_accuracy": validation_accuracy,
+        "confusion_matrix": confusion_matrix,
+        "class_order": ["bacterial_blight", "healthy"],
     }
 
 

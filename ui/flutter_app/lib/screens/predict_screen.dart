@@ -896,46 +896,51 @@ class _ModelAccuracyCard extends StatelessWidget {
               builder: (context, c) {
                 final ring = (c.maxWidth * 0.38).clamp(104.0, 128.0);
                 final p = acc.clamp(0.0, 1.0);
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    SizedBox(
-                      width: ring,
-                      height: ring,
-                      child: CustomPaint(
-                        painter: _AccuracyRingPainter(progress: p),
-                        child: Center(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              '${(p * 100).toStringAsFixed(1)}%',
-                              maxLines: 1,
-                              style: theme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.8,
-                                color: AppColors.primaryDark,
-                                height: 1,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: ring,
+                          height: ring,
+                          child: CustomPaint(
+                            painter: _AccuracyRingPainter(progress: p),
+                            child: Center(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  '${(p * 100).toStringAsFixed(1)}%',
+                                  maxLines: 1,
+                                  style: theme.headlineSmall?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -0.8,
+                                    color: AppColors.primaryDark,
+                                    height: 1,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Validation accuracy',
-                          maxLines: 1,
-                          softWrap: false,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textSecondary,
+                        const SizedBox(width: 20),
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Validation accuracy',
+                              maxLines: 1,
+                              softWrap: false,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
                   ],
                 );

@@ -70,6 +70,26 @@ def get_validation_accuracy_for_metrics() -> float:
     return DEFAULT_VALIDATION_ACCURACY
 
 
+def get_persisted_confusion_matrix() -> Optional[list[list[int]]]:
+    path = Path(METRICS_JSON)
+    if not path.is_file():
+        return None
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        raw = data.get("confusion_matrix")
+        if not isinstance(raw, list):
+            return None
+        out: list[list[int]] = []
+        for row in raw:
+            if not isinstance(row, list):
+                return None
+            out.append([int(v) for v in row])
+        return out
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        return None
+
+
 def humanize_class_name(raw: str) -> str:
     parts = raw.replace("-", "_").split("_")
     return " ".join(p.capitalize() for p in parts if p)
