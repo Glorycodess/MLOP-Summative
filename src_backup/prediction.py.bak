@@ -1,0 +1,26 @@
+"""Binary cassava disease classifier — inference only."""
+
+from __future__ import annotations
+
+import numpy as np
+
+from src.model import CLASS_NAMES, get_model
+from src.preprocessing import preprocess_image
+
+
+def predict_image(image_path: str) -> dict:
+    model = get_model()
+    img_array = preprocess_image(image_path)
+    prediction = model.predict(img_array, verbose=0)[0]
+
+    predicted_index = int(np.argmax(prediction))
+    predicted_class = CLASS_NAMES[predicted_index]
+    confidence = float(prediction[predicted_index])
+
+    return {
+        "predicted_class":redicted_class,
+        "confidence": confidence,
+        "probabilities": {
+            CLASS_NAMES[i]: float(prediction[i]) for i in range(len(CLASS_NAMES))
+        },
+    }

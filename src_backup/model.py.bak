@@ -1,0 +1,58 @@
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
+os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
+
+from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras.layers import GlobalAveragePooling2D, Dense, Dropout
+from tensorflow.keras.models import Model, load_model
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+MODEL_PATH = BASE_DIR / "models" / "cassava_binary_final.keras"
+
+CLASS_NAMES = [
+    "bacterial_blight",
+    "healthy",
+]
+
+EXPECTED_CLASS_ORDER = ["bacterial_blight", "healthy"]
+
+_model = None
+
+
+def get_model():
+    global _model
+    if _model is None:
+        if not MODEL_PATH.is_file():
+            raise FileNotFoundError(
+                f"Model not found at {MODEL_PATH}. Deploy the .keras file with the API.",
+            )
+        _model = load_model(MODEL_PATH, compile=False)
+    return _model
+
+
+def build_binary_model(num_classes: int) -> Model:
+    base_model = MobileNetV2(
+        weights="imagenet",
+        include_top=False,
+        input_shape=(224, 224, 3),
+    )
+    base_model.trainable = False
+
+    x = base_model.output
+    x = GlobalAveragePooling2D()(x)
+    x = Dense(128, activation="relu")(x)
+    x = Dropout(0.5)(x)
+    outputs = Dense(num_classes, activation="softmax")(x)
+
+    model = Model(inputs=base_model.input, outputs=outputs)
+
+    model.compile(
+        optimizer="adam",
+        loss="categorical_crossentropy",
+        metrics=["accuracy"],
+    )
+    return model

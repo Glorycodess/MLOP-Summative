@@ -1,1 +1,1 @@
-{"validation_accuracy": 0.612500011920929, "validation_loss": 0.6430773735046387, "class_order": ["bacterial_blight", "healthy"], "confusion_matrix": [[25, 15], [16, 24]]}
+{"validation_accuracy": 0.6625000238418579, "validation_loss": 0.617569088935852, "class_order": ["bacterial_blight", "healthy"], "confusion_matrix": [[27, 13], [14, 26]]}
