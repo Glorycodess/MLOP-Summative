@@ -5,16 +5,21 @@ import os
 from pathlib import Path
 from typing import Dict, Optional
 
-METRICS_JSON = os.path.join("models", "training_metrics.json")
-ORIGINAL_DATA_DIR = "Notebook/cassava_small"
-NEW_DATA_DIR = "data/new_data"
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+METRICS_JSON = BASE_DIR / "models" / "training_metrics.json"
+TRAIN_DATA_DIR = BASE_DIR / "data" / "train"
+NEW_DATA_DIR = BASE_DIR / "data" / "new_data"
 
 EXPECTED_CLASSES = (
     "bacterial_blight",
+    "brown_streak",
+    "green_mottle",
     "healthy",
+    "mosaic",
 )
 
-DEFAULT_VALIDATION_ACCURACY = 0.67 #initial binary model accuracy
+DEFAULT_VALIDATION_ACCURACY = 0.67
 
 _IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif"}
 
@@ -42,22 +47,22 @@ def _counts_under_root(root: Path) -> Dict[str, int]:
 
 
 def get_class_distribution_counts() -> Dict[str, int]:
-    """Merge image counts from original dataset + uploaded data folders."""
+    """Merge image counts from train + uploaded data folders."""
     merged: Dict[str, int] = {}
-    for base in (ORIGINAL_DATA_DIR, NEW_DATA_DIR):
+    for base in (TRAIN_DATA_DIR, NEW_DATA_DIR):
         for k, v in _counts_under_root(Path(base)).items():
             merged[k] = merged.get(k, 0) + v
     return merged
 
 
 def get_original_dataset_class_counts() -> Dict[str, int]:
-    """Counts from the project cassava dataset only (Notebook/cassava_small)."""
-    return _counts_under_root(Path(ORIGINAL_DATA_DIR))
+    """Counts from data/train/ only."""
+    return _counts_under_root(TRAIN_DATA_DIR)
 
 
 def get_class_distribution_for_metrics() -> Dict[str, int]:
     """
-    Class counts for GET /metrics: original dataset folders, all model classes present.
+    Class counts for GET /metrics: all classes in data/train/.
     Missing folders report 0.
     """
     raw = get_original_dataset_class_counts()
@@ -65,7 +70,7 @@ def get_class_distribution_for_metrics() -> Dict[str, int]:
 
 
 def get_persisted_validation_accuracy() -> Optional[float]:
-    """Last validation accuracy from retrain (0–1), or None if not saved."""
+    """Last validation accuracy from retrain (0-1), or None if not saved."""
     path = Path(METRICS_JSON)
     if not path.is_file():
         return None
