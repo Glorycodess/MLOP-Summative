@@ -106,9 +106,9 @@ def retrain_model(new_data_dir=NEW_DATA_DIR, train_dir=ORIGINAL_DATA_DIR):
     val_loss, val_accuracy = model.evaluate(val_data, verbose=0)
     model.save(str(MODEL_PATH))
 
-    if new_data_dir.exists():
-        shutil.rmtree(new_data_dir)
-        new_data_dir.mkdir(parents=True, exist_ok=True)
+    # Do NOT delete uploaded images after training.
+    # Product flow expects the server to retain uploaded data so users can retrain later
+    # without re-uploading.
 
     metrics_path = BASE_DIR / "models" / "training_metrics.json"
     metrics_path.parent.mkdir(parents=True, exist_ok=True)

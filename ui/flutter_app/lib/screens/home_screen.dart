@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../utils/app_colors.dart';
@@ -16,34 +18,43 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final ApiService _api = ApiService();
+  Timer? _refreshTimer;
 
   bool _loading = true;
   HealthResponse? _health;
+  ModelInsightsResponse? _metrics;
   bool _loadFailed = false;
 
   @override
   void initState() {
     super.initState();
-    _loadHealth();
+    _loadAll();
+    _refreshTimer = Timer.periodic(
+      const Duration(seconds: 20),
+      (_) => _loadAll(),
+    );
   }
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
     _api.dispose();
     super.dispose();
   }
 
-  Future<void> _loadHealth() async {
+  Future<void> _loadAll() async {
     setState(() {
       _loading = true;
       _loadFailed = false;
     });
     try {
       final health = await _api.fetchHealth();
+      final metrics = await _api.fetchModelInsights();
       if (!mounted) return;
       setState(() {
         _loading = false;
         _health = health;
+        _metrics = metrics;
         _loadFailed = false;
       });
     } catch (_) {
@@ -51,6 +62,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _loading = false;
         _health = null;
+        _metrics = null;
         _loadFailed = true;
       });
     }
@@ -85,6 +97,17 @@ class _HomeScreenState extends State<HomeScreen> {
     if (m != null && m.isNotEmpty) return AppColors.primaryDark;
     return AppColors.textSecondary;
   }
+
+  String get _validationAccuracyLabel {
+    if (_loading) return '…';
+    final v = _metrics?.validationAccuracy;
+    if (v == null) return 'No training result yet';
+    final pct = (v <= 1.01 ? v * 100 : v).clamp(0, 100);
+    return '${pct.toStringAsFixed(1)}%';
+  }
+
+  int get _healthyCount => _metrics?.classDistribution['healthy'] ?? 0;
+  int get _blightCount => _metrics?.classDistribution['bacterial_blight'] ?? 0;
 
   bool get _apiOnline =>
       !_loading && !_loadFailed && _health != null && _health!.status == 'ok';
@@ -128,6 +151,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       apiStatusColor: _apiStatusColor,
                       modelStatusLabel: _modelStatusLabel,
                       modelStatusColor: _modelStatusColor,
+                      validationAccuracyLabel: _validationAccuracyLabel,
+                      healthyCount: _healthyCount,
+                      blightCount: _blightCount,
                     ),
                     const SizedBox(height: 36),
                     _OverviewCard(theme: theme),
@@ -207,6 +233,9 @@ class _SystemStatusPanel extends StatelessWidget {
     required this.apiStatusColor,
     required this.modelStatusLabel,
     required this.modelStatusColor,
+    required this.validationAccuracyLabel,
+    required this.healthyCount,
+    required this.blightCount,
   });
 
   final TextTheme theme;
@@ -216,6 +245,9 @@ class _SystemStatusPanel extends StatelessWidget {
   final Color? apiStatusColor;
   final String modelStatusLabel;
   final Color? modelStatusColor;
+  final String validationAccuracyLabel;
+  final int healthyCount;
+  final int blightCount;
 
   @override
   Widget build(BuildContext context) {
@@ -294,7 +326,7 @@ class _SystemStatusPanel extends StatelessWidget {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'API, model, and last validation snapshot',
+                              'API, model, validation and binary data coverage',
                               style: theme.bodySmall?.copyWith(
                                 color: AppColors.textSecondary,
                                 height: 1.35,
@@ -348,11 +380,25 @@ class _SystemStatusPanel extends StatelessWidget {
                           valueColor: modelStatusColor,
                         ),
                         const SizedBox(height: 10),
-                        const InfoCard(
+                        InfoCard(
                           title: 'Last validation accuracy',
-                          value: '46%',
+                          value: validationAccuracyLabel,
                           icon: Icons.show_chart_rounded,
                           valueColor: AppColors.textPrimary,
+                        ),
+                        const SizedBox(height: 10),
+                        InfoCard(
+                          title: 'Healthy images',
+                          value: '$healthyCount',
+                          icon: Icons.favorite_outline_rounded,
+                          valueColor: AppColors.primaryDark,
+                        ),
+                        const SizedBox(height: 10),
+                        InfoCard(
+                          title: 'Bacterial blight images',
+                          value: '$blightCount',
+                          icon: Icons.warning_amber_rounded,
+                          valueColor: AppColors.warning,
                         ),
                       ],
                     ),
@@ -501,12 +547,12 @@ class _OverviewCard extends StatelessWidget {
       'Predict disease from a single leaf photo',
     ),
     (
-      Icons.upload_file_rounded,
-      'Upload labeled images for incremental training',
+      Icons.save_alt_rounded,
+      'Predicted samples are saved and reused for retraining',
     ),
     (
       Icons.autorenew_rounded,
-      'Trigger retraining and refresh the deployed model',
+      'Trigger retraining anytime using already saved data',
     ),
     (
       Icons.dashboard_customize_outlined,

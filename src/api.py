@@ -1,16 +1,20 @@
 import os
 import shutil
 from contextlib import asynccontextmanager
+from pathlib import Path
+from uuid import uuid4
 
-from fastapi import BackgroundTasks, FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile
 from typing import List
 
 from src import insights as insights_module
 from src.prediction import get_model, predict_image
 
-UPLOAD_DIR = "uploads"
-NEW_DATA_DIR = "data/new_data"
-TRAIN_DIR = "data/train"
+BASE_DIR = Path(__file__).resolve().parent.parent
+UPLOAD_DIR = BASE_DIR / "uploads"
+NEW_DATA_DIR = BASE_DIR / "data" / "new_data"
+TRAIN_DIR = BASE_DIR / "data" / "train"
+ALLOWED_BINARY_LABELS = {"healthy", "bacterial_blight"}
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(NEW_DATA_DIR, exist_ok=True)
@@ -56,16 +60,26 @@ def metrics():
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
-    file_path = os.path.join(UPLOAD_DIR, file.filename)
+    file_path = str(Path(UPLOAD_DIR) / file.filename)
 
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
     result = predict_image(file_path)
+    predicted_label = result["predicted_class"]
+
+    # Save predicted image into binary retrain pool so retrain can run later
+    # without requiring users to upload again.
+    if predicted_label in ALLOWED_BINARY_LABELS:
+        dst_dir = Path(NEW_DATA_DIR) / predicted_label
+        dst_dir.mkdir(parents=True, exist_ok=True)
+        suffix = Path(file.filename).suffix.lower() or ".jpg"
+        dst_name = f"{Path(file.filename).stem}_{uuid4().hex[:10]}{suffix}"
+        shutil.copy2(file_path, dst_dir / dst_name)
 
     return {
         "filename": file.filename,
-        "prediction": result["predicted_class"],
+        "prediction": predicted_label,
         "confidence": result["confidence"],
         "probabilities": result["probabilities"],
     }
@@ -76,7 +90,14 @@ async def upload_data(
     label: str,
     files: List[UploadFile] = File(...),
 ):
-    label_dir = os.path.join(NEW_DATA_DIR, label)
+    label = label.strip().lower()
+    if label not in ALLOWED_BINARY_LABELS:
+        return {
+            "message": "Only binary labels are allowed",
+            "label": label,
+            "files": [],
+        }
+    label_dir = str(Path(NEW_DATA_DIR) / label)
     os.makedirs(label_dir, exist_ok=True)
 
     saved_files = []
@@ -95,11 +116,13 @@ async def upload_data(
 
 
 @app.post("/retrain")
-def retrain(background_tasks: BackgroundTasks):
+def retrain():
+    """
+    Retrain immediately and return metrics.
+
+    Flutter expects `validation_accuracy` and `validation_loss` in the response.
+    """
     # Import only when retrain is invoked — avoids loading the full training graph at worker startup.
     from src.retrain import retrain_model
 
-    background_tasks.add_task(retrain_model, new_data_dir=NEW_DATA_DIR, train_dir=TRAIN_DIR)
-    return {
-        "message": "Retraining started in background. Check /metrics for updated accuracy when done.",
-    }
+    return retrain_model(new_data_dir=NEW_DATA_DIR, train_dir=TRAIN_DIR)

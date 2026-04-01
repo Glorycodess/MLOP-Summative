@@ -4,6 +4,12 @@ import 'package:http/http.dart' as http;
 
 import '../utils/constants.dart';
 
+double _asDouble(dynamic v, {double fallback = 0}) {
+  if (v is num) return v.toDouble();
+  if (v is String) return double.tryParse(v.trim()) ?? fallback;
+  return fallback;
+}
+
 /// Response body from `GET /health`.
 class HealthResponse {
   const HealthResponse({
@@ -47,14 +53,16 @@ class ModelInsightsResponse {
         final v = e.value;
         if (k is String && v is num) {
           map[k] = v.round();
+        } else if (k is String && v is String) {
+          map[k] = int.tryParse(v.trim()) ?? 0;
         }
       }
     }
 
     double? acc;
     final a = json['validation_accuracy'];
-    if (a is num) {
-      acc = a.toDouble();
+    if (a != null) {
+      acc = _asDouble(a);
     }
 
     return ModelInsightsResponse(
@@ -77,11 +85,7 @@ class PredictResponse {
   final double confidence;
 
   factory PredictResponse.fromJson(Map<String, dynamic> json) {
-    final conf = json['confidence'];
-    double c = 0;
-    if (conf is num) {
-      c = conf.toDouble();
-    }
+    final c = _asDouble(json['confidence']);
     return PredictResponse(
       filename: json['filename'] as String? ?? '',
       prediction: json['prediction'] as String? ?? 'unknown',
@@ -327,12 +331,12 @@ class RetrainResponse {
   final double validationLoss;
 
   factory RetrainResponse.fromJson(Map<String, dynamic> json) {
-    final acc = json['validation_accuracy'];
-    final loss = json['validation_loss'];
+    final acc = _asDouble(json['validation_accuracy']);
+    final loss = _asDouble(json['validation_loss']);
     return RetrainResponse(
       message: json['message'] as String? ?? '',
-      validationAccuracy: acc is num ? acc.toDouble() : 0,
-      validationLoss: loss is num ? loss.toDouble() : 0,
+      validationAccuracy: acc,
+      validationLoss: loss,
     );
   }
 }
