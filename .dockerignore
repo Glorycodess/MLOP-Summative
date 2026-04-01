@@ -1,0 +1,10 @@
+data/
+notebook/
+uploads/
+ui/
+*.ipynb
+__pycache__/
+.git/
+.venv/
+venv/
+*.log
