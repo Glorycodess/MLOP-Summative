@@ -1,45 +1,48 @@
 import json
 import os
 import shutil
+from pathlib import Path
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.layers import GlobalAveragePooling2D, Dense, Dropout
 from tensorflow.keras.models import Model
 
-MODEL_PATH = "models/cassava_binary_final.keras"
-ORIGINAL_DATA_DIR = "data/train"
-NEW_DATA_DIR = "data/new_data"
-COMBINED_DATA_DIR = "data/combined_data"
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+MODEL_PATH = BASE_DIR / "models" / "cassava_binary_final.keras"
+ORIGINAL_DATA_DIR = BASE_DIR / "data" / "train"
+NEW_DATA_DIR = BASE_DIR / "data" / "new_data"
+COMBINED_DATA_DIR = BASE_DIR / "data" / "combined_data"
 
 IMG_SIZE = (224, 224)
 BATCH_SIZE = 32
 
 
-def copy_folder_contents(src_folder: str, dst_folder: str):
-    if not os.path.exists(src_folder):
+def copy_folder_contents(src_folder, dst_folder):
+    src_folder = Path(src_folder)
+    dst_folder = Path(dst_folder)
+    if not src_folder.exists():
         return
 
-    for class_name in os.listdir(src_folder):
-        src_class_dir = os.path.join(src_folder, class_name)
-        dst_class_dir = os.path.join(dst_folder, class_name)
+    for class_dir in src_folder.iterdir():
+        if not class_dir.is_dir():
+            continue
+        dst_class_dir = dst_folder / class_dir.name
+        dst_class_dir.mkdir(parents=True, exist_ok=True)
 
-        if os.path.isdir(src_class_dir):
-            os.makedirs(dst_class_dir, exist_ok=True)
-
-            for filename in os.listdir(src_class_dir):
-                src_file = os.path.join(src_class_dir, filename)
-                dst_file = os.path.join(dst_class_dir, filename)
-
-                if os.path.isfile(src_file):
-                    shutil.copy2(src_file, dst_file)
+        for file in class_dir.iterdir():
+            if file.is_file():
+                shutil.copy2(file, dst_class_dir / file.name)
 
 
-def retrain_model(new_data_dir: str = NEW_DATA_DIR, train_dir: str = ORIGINAL_DATA_DIR):
-    if os.path.exists(COMBINED_DATA_DIR):
+def retrain_model(new_data_dir=NEW_DATA_DIR, train_dir=ORIGINAL_DATA_DIR):
+    new_data_dir = Path(new_data_dir)
+    train_dir = Path(train_dir)
+
+    if COMBINED_DATA_DIR.exists():
         shutil.rmtree(COMBINED_DATA_DIR)
-
-    os.makedirs(COMBINED_DATA_DIR, exist_ok=True)
+    COMBINED_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     copy_folder_contents(train_dir, COMBINED_DATA_DIR)
     copy_folder_contents(new_data_dir, COMBINED_DATA_DIR)
@@ -53,7 +56,7 @@ def retrain_model(new_data_dir: str = NEW_DATA_DIR, train_dir: str = ORIGINAL_DA
     )
 
     train_data = datagen.flow_from_directory(
-        COMBINED_DATA_DIR,
+        str(COMBINED_DATA_DIR),
         target_size=IMG_SIZE,
         batch_size=BATCH_SIZE,
         class_mode="categorical",
@@ -62,7 +65,7 @@ def retrain_model(new_data_dir: str = NEW_DATA_DIR, train_dir: str = ORIGINAL_DA
     )
 
     val_data = datagen.flow_from_directory(
-        COMBINED_DATA_DIR,
+        str(COMBINED_DATA_DIR),
         target_size=IMG_SIZE,
         batch_size=BATCH_SIZE,
         class_mode="categorical",
@@ -93,7 +96,7 @@ def retrain_model(new_data_dir: str = NEW_DATA_DIR, train_dir: str = ORIGINAL_DA
         metrics=["accuracy"]
     )
 
-    history = model.fit(
+    model.fit(
         train_data,
         validation_data=val_data,
         epochs=3,
@@ -101,14 +104,14 @@ def retrain_model(new_data_dir: str = NEW_DATA_DIR, train_dir: str = ORIGINAL_DA
     )
 
     val_loss, val_accuracy = model.evaluate(val_data, verbose=0)
-    model.save(MODEL_PATH)
+    model.save(str(MODEL_PATH))
 
-    if os.path.exists(new_data_dir):
+    if new_data_dir.exists():
         shutil.rmtree(new_data_dir)
-        os.makedirs(new_data_dir, exist_ok=True)
+        new_data_dir.mkdir(parents=True, exist_ok=True)
 
-    metrics_path = os.path.join("models", "training_metrics.json")
-    os.makedirs(os.path.dirname(metrics_path), exist_ok=True)
+    metrics_path = BASE_DIR / "models" / "training_metrics.json"
+    metrics_path.parent.mkdir(parents=True, exist_ok=True)
     with open(metrics_path, "w", encoding="utf-8") as f:
         json.dump(
             {
