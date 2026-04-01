@@ -1,6 +1,6 @@
 import os
 import shutil
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, BackgroundTasks
 from typing import List
 
 from src.prediction import predict_image
@@ -11,11 +11,11 @@ app = FastAPI(title="Cassava Binary Cassava Leaf API")
 
 UPLOAD_DIR = "uploads"
 NEW_DATA_DIR = "data/new_data"
-TRAIN_DIR = "data/train"  
+TRAIN_DIR = "data/train"
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(NEW_DATA_DIR, exist_ok=True)
-os.makedirs(TRAIN_DIR, exist_ok=True)  
+os.makedirs(TRAIN_DIR, exist_ok=True)
 
 
 @app.get("/")
@@ -83,6 +83,6 @@ async def upload_data(
 
 
 @app.post("/retrain")
-def retrain():
-    result = retrain_model(new_data_dir=NEW_DATA_DIR, train_dir=TRAIN_DIR)  
-    return result
+def retrain(background_tasks: BackgroundTasks):
+    background_tasks.add_task(retrain_model, new_data_dir=NEW_DATA_DIR, train_dir=TRAIN_DIR)
+    return {"message": "Retraining started in background. Check /metrics for updated accuracy when done."}
