@@ -140,7 +140,7 @@ locust -f locustfile.py --host=https://mlop-summative-production.up.railway.app
 
 Then open `http://localhost:8089` and set number of users.
 
-<## Load Testing Results
+## Load Testing Results
 
 ### Run 1
 ![Locust Test 1](assets/locust_img_1.png)
