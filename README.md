@@ -8,10 +8,8 @@ A machine learning pipeline that classifies cassava leaves as either **Healthy**
 YouTube: [`[https://youtu.be/6jAWdGQehgc]`](https://www.youtube.com/watch?v=6jAWdGQehgc)
 
 ---
-
-LIVE UI: https://cassava-leaf-insight.streamlit.app/
-
 ## Live URL
+Live Ui: https://cassava-leaf-insight.streamlit.app/
 
 API:[ https://mlop-summative-production.up.railway.app](https://mlop-summative-production.up.railway.app/)
 
