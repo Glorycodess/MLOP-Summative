@@ -13,7 +13,7 @@ API Docs: [`https://mlop-summative-production.up.railway.app/docs`](https://mlop
 
 API:[ https://mlop-summative-production.up.railway.app](https://mlop-summative-production.up.railway.app/)
 
-Live Ui:[ [https://cassava-leaf-insight.streamlit.app/](https://mlop-summative-1.streamlit.app/)](https://mlop-summative-2.streamlit.app/)
+Live Ui:https://mlop-summative-2.streamlit.app/
 
 ---
 
