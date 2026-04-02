@@ -101,5 +101,15 @@ async def upload_data(
 def retrain():
     from src.retrain import retrain_model
 
-    result = retrain_model()
-    return result
+    try:
+        result = retrain_model()
+        return result
+    except HTTPException:
+        # Preserve explicit HTTP errors from the retraining logic.
+        raise
+    except Exception as e:
+        # Railway will surface this detail to the caller as JSON `{ "detail": ... }`.
+        raise HTTPException(
+            status_code=500,
+            detail=f"Retraining failed ({type(e).__name__}): {e}",
+        ) from e

@@ -1,6 +1,9 @@
+import math
 import json
 import shutil
 from pathlib import Path
+
+from fastapi import HTTPException
 
 import numpy as np
 
@@ -13,6 +16,23 @@ ORIGINAL_DATA_DIR = BASE_DIR / "data" / "train"
 NEW_DATA_DIR = BASE_DIR / "data" / "new_data"
 COMBINED_DATA_DIR = BASE_DIR / "data" / "combined_data"
 
+IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif"}
+
+
+def _is_image_file(path: Path) -> bool:
+    return path.is_file() and path.suffix.lower() in IMAGE_EXTS
+
+
+def _count_images_in_root(root_dir: Path) -> int:
+    """Count images under the binary class folders only."""
+    total = 0
+    for class_name in EXPECTED_CLASS_ORDER:
+        class_dir = root_dir / class_name
+        if not class_dir.is_dir():
+            continue
+        total += sum(1 for f in class_dir.iterdir() if _is_image_file(f))
+    return int(total)
+
 
 def copy_folder_contents(src_folder, dst_folder):
     src_folder = Path(src_folder)
@@ -20,14 +40,17 @@ def copy_folder_contents(src_folder, dst_folder):
     if not src_folder.exists():
         return
 
-    for class_dir in src_folder.iterdir():
+    # Copy only the binary class folders required by the model.
+    for class_name in EXPECTED_CLASS_ORDER:
+        class_dir = src_folder / class_name
         if not class_dir.is_dir():
             continue
-        dst_class_dir = dst_folder / class_dir.name
+
+        dst_class_dir = dst_folder / class_name
         dst_class_dir.mkdir(parents=True, exist_ok=True)
 
         for file in class_dir.iterdir():
-            if file.is_file():
+            if _is_image_file(file):
                 shutil.copy2(file, dst_class_dir / file.name)
 
 
@@ -35,12 +58,55 @@ def retrain_model(new_data_dir=NEW_DATA_DIR, train_dir=ORIGINAL_DATA_DIR):
     new_data_dir = Path(new_data_dir)
     train_dir = Path(train_dir)
 
+    # Clean slate for merged dataset.
     if COMBINED_DATA_DIR.exists():
-        shutil.rmtree(COMBINED_DATA_DIR)
+        # On hosted environments the combined folder might be missing or non-empty.
+        # ignore_errors keeps retraining from crashing on filesystem edge cases.
+        shutil.rmtree(COMBINED_DATA_DIR, ignore_errors=True)
     COMBINED_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-    copy_folder_contents(train_dir, COMBINED_DATA_DIR)
-    copy_folder_contents(new_data_dir, COMBINED_DATA_DIR)
+    train_has_images = _count_images_in_root(train_dir)
+    new_has_images = _count_images_in_root(new_data_dir)
+
+    # Deployment-safe fallback:
+    # - if `data/train` is missing/empty, fall back to `data/new_data`
+    # - if both are empty, stop early with a clean error
+    if train_has_images <= 0:
+        if new_has_images <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Retraining data not found. Expected images under "
+                    "`data/train/<class>/` or `data/new_data/<class>/`."
+                ),
+            )
+        copy_folder_contents(new_data_dir, COMBINED_DATA_DIR)
+    else:
+        copy_folder_contents(train_dir, COMBINED_DATA_DIR)
+        if new_has_images > 0:
+            copy_folder_contents(new_data_dir, COMBINED_DATA_DIR)
+
+    merged_count = _count_images_in_root(COMBINED_DATA_DIR)
+    if merged_count <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Merged training dataset is empty after combining source folders.",
+        )
+
+    # Reduce compute / memory for hosted environments.
+    batch_size = max(1, min(8, int(BATCH_SIZE)))
+    epochs = 1
+    max_train_steps = 10
+    max_val_steps = 5
+
+    # Avoid keeping old TF graphs around between retrains.
+    try:
+        from tensorflow.keras import backend as K
+
+        K.clear_session()
+    except Exception:
+        # If TF backend import fails for some reason, continue anyway.
+        pass
 
     train_datagen = create_training_datagen()
     val_datagen = create_validation_datagen()
@@ -48,7 +114,7 @@ def retrain_model(new_data_dir=NEW_DATA_DIR, train_dir=ORIGINAL_DATA_DIR):
     train_data = train_datagen.flow_from_directory(
         str(COMBINED_DATA_DIR),
         target_size=IMG_SIZE,
-        batch_size=BATCH_SIZE,
+        batch_size=batch_size,
         class_mode="categorical",
         subset="training",
         shuffle=True,
@@ -57,10 +123,30 @@ def retrain_model(new_data_dir=NEW_DATA_DIR, train_dir=ORIGINAL_DATA_DIR):
     val_data = val_datagen.flow_from_directory(
         str(COMBINED_DATA_DIR),
         target_size=IMG_SIZE,
-        batch_size=BATCH_SIZE,
+        batch_size=batch_size,
         class_mode="categorical",
         subset="validation",
         shuffle=False,
+    )
+
+    # With very small datasets, validation split can become empty.
+    if train_data.samples <= 0 or val_data.samples <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Not enough images to create a non-empty train/validation split. "
+                f"train_samples={train_data.samples}, val_samples={val_data.samples}. "
+                "Upload more images (both classes recommended)."
+            ),
+        )
+
+    steps_per_epoch = min(
+        max_train_steps,
+        max(1, math.ceil(float(train_data.samples) / float(batch_size))),
+    )
+    validation_steps = min(
+        max_val_steps,
+        max(1, math.ceil(float(val_data.samples) / float(batch_size))),
     )
 
     num_classes = train_data.num_classes
@@ -69,15 +155,23 @@ def retrain_model(new_data_dir=NEW_DATA_DIR, train_dir=ORIGINAL_DATA_DIR):
     model.fit(
         train_data,
         validation_data=val_data,
-        epochs=3,
+        epochs=epochs,
         verbose=1,
+        steps_per_epoch=steps_per_epoch,
+        validation_steps=validation_steps,
     )
 
-    val_loss, val_accuracy = model.evaluate(val_data, verbose=0)
+    # Rewind validation iterator so evaluation and prediction see the same ordering.
     val_data.reset()
-    y_true = val_data.classes.astype(int)
-    y_probs = model.predict(val_data, verbose=0)
+    val_loss, val_accuracy = model.evaluate(
+        val_data, verbose=0, steps=validation_steps
+    )
+    val_data.reset()
+    y_probs = model.predict(val_data, verbose=0, steps=validation_steps)
     y_pred = np.argmax(y_probs, axis=1).astype(int)
+
+    # y_true uses the iterator's full class listing; slice to match the limited predict steps.
+    y_true = val_data.classes.astype(int)[: len(y_pred)]
 
     class_by_index = {idx: name for name, idx in val_data.class_indices.items()}
     binary_index = {name: i for i, name in enumerate(EXPECTED_CLASS_ORDER)}
@@ -106,8 +200,21 @@ def retrain_model(new_data_dir=NEW_DATA_DIR, train_dir=ORIGINAL_DATA_DIR):
             f,
         )
 
+    model_save_error = None
+    try:
+        MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
+        model.save(str(MODEL_PATH))
+    except Exception as e:
+        # If saving fails, we still want to return metrics and avoid hard-crashing retraining.
+        model_save_error = str(e)
+
+    # Note: keep response structure; only enrich the `message` field on save failures.
+    message = "Model retrained successfully"
+    if model_save_error:
+        message = f"{message} (model save failed: {model_save_error})"
+
     return {
-        "message": "Model retrained successfully",
+        "message": message,
         "validation_accuracy": float(val_accuracy),
         "validation_loss": float(val_loss),
         "confusion_matrix": confusion,
