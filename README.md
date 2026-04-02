@@ -9,7 +9,7 @@ YouTube: [`[https://youtu.be/6jAWdGQehgc]`](https://www.youtube.com/watch?v=6jAW
 
 ---
 
-Deployed streamlit Ui: https://cassava-leaf-insight.streamlit.app/
+LIVE UI: https://cassava-leaf-insight.streamlit.app/
 
 ## Live URL
 
