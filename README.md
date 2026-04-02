@@ -12,7 +12,7 @@ YouTube: `[https://youtu.be/6jAWdGQehgc]`
 
 ## Live URL
 
-API: `https://mlop-summative-production.up.railway.app`
+API:[ https://mlop-summative-production.up.railway.app](https://mlop-summative-production.up.railway.app/)
 
 API Docs: `https://mlop-summative-production.up.railway.app/docs`
 
