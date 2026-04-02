@@ -10,6 +10,8 @@ YouTube: [`[https://youtu.be/6jAWdGQehgc]`](https://www.youtube.com/watch?v=6jAW
 
 ---
 
+Deployed streamlit Ui: https://cassava-leaf-insight.streamlit.app/
+
 ## Live URL
 
 API:[ https://mlop-summative-production.up.railway.app](https://mlop-summative-production.up.railway.app/)
