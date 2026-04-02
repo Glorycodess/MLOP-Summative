@@ -6,15 +6,15 @@ A machine learning pipeline that classifies cassava leaves as either **Healthy**
 
 ## Video Demo
 
-YouTube: `[https://youtu.be/6jAWdGQehgc]`
+YouTube: [`[https://youtu.be/6jAWdGQehgc]`](https://www.youtube.com/watch?v=6jAWdGQehgc)
 
 ---
 
 ## Live URL
 
-API: `https://mlop-summative-production.up.railway.app`
+API:[ https://mlop-summative-production.up.railway.app](https://mlop-summative-production.up.railway.app/)
 
-API Docs: `https://mlop-summative-production.up.railway.app/docs`
+API Docs: [`https://mlop-summative-production.up.railway.app/docs`](https://mlop-summative-production.up.railway.app/docs)
 
 ---
 
