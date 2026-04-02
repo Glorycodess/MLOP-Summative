@@ -6,7 +6,7 @@ A machine learning pipeline that classifies cassava leaves as either **Healthy**
 
 ## Video Demo
 
-YouTube: `[Add your YouTube link here]`
+YouTube: `[https://youtu.be/6jAWdGQehgc]`
 
 ---
 
